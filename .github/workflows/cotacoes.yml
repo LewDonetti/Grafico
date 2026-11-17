@@ -1,0 +1,19 @@
+name: Cotações e resumo
+on:
+  schedule:
+    - cron: '44 21 * * 1-5'   # dias úteis ~18:44 (BRT = UTC-3), após o fechamento
+    - cron: '36 11 * * 6'     # sábado ~08:36 (BRT), resumo da semana
+  workflow_dispatch: {}        # permite rodar na mão pela aba Actions
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Sincronizar cotações e resumo
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python sync/carteira_sync.py
