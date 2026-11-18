@@ -669,6 +669,7 @@
   }
   function leave(){ myId=null; viewingId=null; $('#app').hidden=true; $('#who').hidden=true; $('#gate').hidden=false; $('#login-msg').textContent=''; }
   async function start(){
+    const hashAtBoot=(function(){ try{ return location.hash||''; }catch(e){ return ''; } })();
     const cfg=window.SUPABASE_CONFIG||{};
     if(!cfg.url||!cfg.anonKey||/SEU-|SUA-/.test(cfg.url+cfg.anonKey)){
       $('#gate').hidden=false; $('#form-login').hidden=true;
@@ -676,7 +677,13 @@
     try{ sb=window.supabase.createClient(cfg.url,cfg.anonKey); }
     catch(e){ $('#gate').hidden=false; $('#gate-msg').textContent='Não consegui iniciar o Supabase. Confira o config.js.'; return; }
     const { data:{ session } }=await sb.auth.getSession();
-    if(session) enter(session); else $('#gate').hidden=false;
+    if(session){ enter(session); }
+    else { $('#gate').hidden=false;
+      if(/error/i.test(hashAtBoot)){
+        const d=decodeURIComponent((hashAtBoot.match(/error_description=([^&]*)/)||[])[1]||'').replace(/\+/g,' ');
+        $('#gate-msg').textContent='O link de acesso não funcionou'+(d?(' ('+d+')'):'')+'. Em geral é o link já aberto por um verificador de e-mail, ou expirado. Peça um novo e clique nele na hora, no mesmo navegador.';
+      }
+    }
     sb.auth.onAuthStateChange((_e,ss)=>{ if(ss&&!myId) enter(ss); else if(!ss&&myId) leave(); });
   }
   $('#form-login').addEventListener('submit',async ev=>{ ev.preventDefault(); if(!sb) return; const email=$('#login-email').value.trim(); const msg=$('#login-msg'); if(!email) return;
