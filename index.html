@@ -163,10 +163,11 @@
   <div class="gate-card">
     <div class="eyebrow">Carteira compartilhada · B3</div>
     <h1 style="margin:2px 0 6px">Nossa Carteira</h1>
-    <p class="muted" id="gate-msg">Entre com seu e-mail. Enviamos um link de acesso — é só clicar nele para entrar (sem senha).</p>
+    <p class="muted" id="gate-msg">Entre com seu e-mail e senha.</p>
     <form id="form-login">
-      <label class="f"><span>Seu e-mail</span><input type="email" id="login-email" placeholder="voce@email.com" required autocomplete="email"></label>
-      <button class="primary" type="submit" id="btn-login" style="width:100%;margin-top:10px">Enviar link de acesso</button>
+      <label class="f"><span>E-mail</span><input type="email" id="login-email" placeholder="voce@email.com" required autocomplete="email"></label>
+      <label class="f"><span>Senha</span><input type="password" id="login-pass" placeholder="sua senha" required autocomplete="current-password"></label>
+      <button class="primary" type="submit" id="btn-login" style="width:100%;margin-top:6px">Entrar</button>
     </form>
     <p class="small" id="login-msg"></p>
   </div>
@@ -698,11 +699,13 @@
     }
     sb.auth.onAuthStateChange((_e,ss)=>{ if(ss&&!myId) enter(ss); else if(!ss&&myId) leave(); });
   }
-  $('#form-login').addEventListener('submit',async ev=>{ ev.preventDefault(); if(!sb) return; const email=$('#login-email').value.trim(); const msg=$('#login-msg'); if(!email) return;
-    $('#btn-login').disabled=true; msg.textContent='Enviando…';
-    try{ const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}}); if(error) throw error;
-      msg.textContent='Pronto! Abra o e-mail enviado para '+email+' e clique no link de acesso.'; }
-    catch(e){ msg.textContent='Não consegui enviar ('+((e&&e.message)||'erro')+').'; }
+  $('#form-login').addEventListener('submit',async ev=>{ ev.preventDefault(); if(!sb){ $('#login-msg').textContent='Conexão carregando, tente em 1s.'; return; }
+    const email=$('#login-email').value.trim(), pass=$('#login-pass').value, msg=$('#login-msg');
+    if(!email||!pass){ msg.textContent='Preencha e-mail e senha.'; return; }
+    $('#btn-login').disabled=true; msg.textContent='Entrando…';
+    try{ const {error}=await sb.auth.signInWithPassword({email,password:pass}); if(error) throw error; msg.textContent=''; }
+    catch(e){ const m=((e&&e.message)||'').toLowerCase();
+      msg.textContent = (m.includes('invalid')||m.includes('credentials'))? 'E-mail ou senha incorretos.' : m.includes('not confirmed')? 'Conta não confirmada — peça para recriar sua conta.' : ('Não entrou ('+((e&&e.message)||'erro')+').'); }
     finally{ $('#btn-login').disabled=false; } });
   $('#btn-logout').addEventListener('click',async()=>{ try{ await sb.auth.signOut(); }catch(e){} leave(); });
   $('#btn-rename').addEventListener('click',async()=>{ if(!myId) return; const atual=nome(myId); const novo=(window.prompt('Como você quer aparecer para o grupo?',atual)||'').trim().slice(0,40); if(novo&&novo!==atual){ if(await salvarMembro({display_name:novo})) $('#who-name').textContent=novo; } });

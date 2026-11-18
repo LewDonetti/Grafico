@@ -1,0 +1,27 @@
+name: Criar/atualizar conta
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'E-mail da conta'
+        required: true
+      senha:
+        description: 'Senha (mínimo 6 caracteres)'
+        required: true
+jobs:
+  criar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Esconder a senha dos logs
+        run: echo "::add-mask::${{ inputs.senha }}"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Criar/atualizar a conta
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          CONTA_EMAIL: ${{ inputs.email }}
+          CONTA_SENHA: ${{ inputs.senha }}
+        run: python sync/criar_conta.py
