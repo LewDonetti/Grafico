@@ -676,6 +676,18 @@
       $('#gate-msg').textContent='Configuração pendente: preencha o arquivo config.js com a URL e a chave pública (anon) do seu projeto Supabase. Veja o README.'; return; }
     try{ sb=window.supabase.createClient(cfg.url,cfg.anonKey); }
     catch(e){ $('#gate').hidden=false; $('#gate-msg').textContent='Não consegui iniciar o Supabase. Confira o config.js.'; return; }
+    // Garante que o token que veio no link vire sessão, mesmo se a detecção automática falhar
+    try{
+      if(/access_token=/.test(hashAtBoot)){
+        const p=new URLSearchParams(hashAtBoot.replace(/^#/,''));
+        const at=p.get('access_token'), rt=p.get('refresh_token');
+        if(at&&rt){ await sb.auth.setSession({access_token:at, refresh_token:rt}); }
+        try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+      } else {
+        const code=new URLSearchParams(location.search||'').get('code');
+        if(code && !/error/i.test(hashAtBoot)){ await sb.auth.exchangeCodeForSession(code); try{ history.replaceState(null,'',location.pathname); }catch(e){} }
+      }
+    }catch(e){ /* segue para getSession; se falhar de vez, mostra o aviso abaixo */ }
     const { data:{ session } }=await sb.auth.getSession();
     if(session){ enter(session); }
     else { $('#gate').hidden=false;
