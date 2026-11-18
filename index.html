@@ -163,14 +163,10 @@
   <div class="gate-card">
     <div class="eyebrow">Carteira compartilhada · B3</div>
     <h1 style="margin:2px 0 6px">Nossa Carteira</h1>
-    <p class="muted" id="gate-msg">Entre com seu e-mail e senha. Cada pessoa tem a sua.</p>
+    <p class="muted" id="gate-msg">Entre com seu e-mail. Enviamos um link de acesso — é só clicar nele para entrar (sem senha).</p>
     <form id="form-login">
-      <label class="f"><span>E-mail</span><input type="email" id="login-email" placeholder="voce@email.com" required autocomplete="email"></label>
-      <label class="f"><span>Senha</span><input type="password" id="login-pass" placeholder="mínimo 6 caracteres" minlength="6" required autocomplete="current-password"></label>
-      <div class="row" style="margin-top:4px">
-        <button class="primary" type="submit" id="btn-login" style="flex:1;min-width:120px">Entrar</button>
-        <button type="button" id="btn-signup" style="flex:1;min-width:120px">Criar conta</button>
-      </div>
+      <label class="f"><span>Seu e-mail</span><input type="email" id="login-email" placeholder="voce@email.com" required autocomplete="email"></label>
+      <button class="primary" type="submit" id="btn-login" style="width:100%;margin-top:10px">Enviar link de acesso</button>
     </form>
     <p class="small" id="login-msg"></p>
   </div>
@@ -683,30 +679,12 @@
     if(session) enter(session); else $('#gate').hidden=false;
     sb.auth.onAuthStateChange((_e,ss)=>{ if(ss&&!myId) enter(ss); else if(!ss&&myId) leave(); });
   }
-  function msgLogin(t){ $('#login-msg').textContent=t; }
-  function erroAuth(e){ const m=((e&&e.message)||'').toLowerCase();
-    if(m.includes('invalid login')||m.includes('invalid credentials')) return 'E-mail ou senha incorretos.';
-    if(m.includes('already registered')||m.includes('already been registered')) return 'Esse e-mail já tem conta — clique em Entrar.';
-    if(m.includes('password')&&(m.includes('6')||m.includes('short')||m.includes('least'))) return 'A senha precisa ter pelo menos 6 caracteres.';
-    if(m.includes('email not confirmed')) return 'E-mail ainda não confirmado — peça pra desligar "Confirm email" no Supabase (veja instruções).';
-    if(m.includes('signups not allowed')) return 'Criação de conta está desativada no Supabase.';
-    return (e&&e.message)||'não deu certo'; }
-  async function fazerLogin(modo){ if(!sb){ msgLogin('Conexão ainda carregando, tente de novo em 1s.'); return; }
-    const email=$('#login-email').value.trim(), pass=$('#login-pass').value;
-    if(!email||!pass){ msgLogin('Preencha e-mail e senha.'); return; }
-    if(pass.length<6){ msgLogin('A senha precisa ter pelo menos 6 caracteres.'); return; }
-    $('#btn-login').disabled=true; $('#btn-signup').disabled=true; msgLogin(modo==='signup'?'Criando conta…':'Entrando…');
-    try{
-      const {data,error}= modo==='signup'
-        ? await sb.auth.signUp({email,password:pass})
-        : await sb.auth.signInWithPassword({email,password:pass});
-      if(error) throw error;
-      if(modo==='signup' && !(data&&data.session)){ msgLogin('Conta criada! Agora clique em Entrar. (Se pedir confirmação por e-mail, desligue "Confirm email" no Supabase.)'); }
-      else { msgLogin(''); }
-    }catch(e){ msgLogin(erroAuth(e)); }
-    finally{ $('#btn-login').disabled=false; $('#btn-signup').disabled=false; } }
-  $('#form-login').addEventListener('submit',ev=>{ ev.preventDefault(); fazerLogin('login'); });
-  $('#btn-signup').addEventListener('click',()=>fazerLogin('signup'));
+  $('#form-login').addEventListener('submit',async ev=>{ ev.preventDefault(); if(!sb) return; const email=$('#login-email').value.trim(); const msg=$('#login-msg'); if(!email) return;
+    $('#btn-login').disabled=true; msg.textContent='Enviando…';
+    try{ const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}}); if(error) throw error;
+      msg.textContent='Pronto! Abra o e-mail enviado para '+email+' e clique no link de acesso.'; }
+    catch(e){ msg.textContent='Não consegui enviar ('+((e&&e.message)||'erro')+').'; }
+    finally{ $('#btn-login').disabled=false; } });
   $('#btn-logout').addEventListener('click',async()=>{ try{ await sb.auth.signOut(); }catch(e){} leave(); });
   $('#btn-rename').addEventListener('click',async()=>{ if(!myId) return; const atual=nome(myId); const novo=(window.prompt('Como você quer aparecer para o grupo?',atual)||'').trim().slice(0,40); if(novo&&novo!==atual){ if(await salvarMembro({display_name:novo})) $('#who-name').textContent=novo; } });
   start();
